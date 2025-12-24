@@ -1,5 +1,7 @@
 # Kali MCP Server
 
+[中文文档](README_CN.md) | **English**
+
 A Model Context Protocol (MCP) server that exposes Kali Linux security tools to Claude AI for authorized security testing and penetration testing.
 
 ## 🌟 Features

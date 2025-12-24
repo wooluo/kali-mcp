@@ -1,5 +1,7 @@
 # Kali MCP 服务器
 
+**中文** | [English](README.md)
+
 一个模型上下文协议(MCP)服务器，将 Kali Linux 安全工具暴露给 Claude AI，用于授权的安全测试和渗透测试。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

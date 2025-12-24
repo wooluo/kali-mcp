@@ -1,0 +1,69 @@
+# Kali MCP Server Configuration
+# This configuration controls the security and behavior of the MCP server
+
+# Authorization settings
+authorization:
+  # Require explicit authorization for offensive operations
+  require_auth_for_exploitation: true
+  # Log all operations for audit purposes
+  audit_log_enabled: true
+  # Allowed target ranges (CIDR notation) - empty means all targets require explicit confirmation
+  allowed_ranges: []
+  # Blocklisted ranges that should never be targeted
+  blocked_ranges:
+    - "127.0.0.0/8"
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
+    - "169.254.0.0/16"
+
+# Tool settings
+tools:
+  # Reconnaissance tools
+  reconnaissance:
+    enabled: true
+    max_parallel_scans: 3
+    timeout: 300  # seconds
+
+  # Scanning tools
+  scanning:
+    enabled: true
+    default_scan_intensity: "normal"  # light, normal, aggressive
+    max_threads: 10
+
+  # Exploitation tools
+  exploitation:
+    enabled: true
+    require_confirmation: true
+    auto_payload_selection: false
+    allowed_payload_types:
+      - "reverse_tcp"
+      - "bind_tcp"
+      - "shellcode"
+
+  # Post-exploitation tools
+  post_exploitation:
+    enabled: true
+    max_session_duration: 3600  # seconds
+    require_persistence_warning: true
+
+  # Utility tools (encoding/decoding)
+  utilities:
+    enabled: true
+
+# Logging
+logging:
+  level: INFO
+  file: /var/log/kali_mcp.log
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Security
+security:
+  # Enable sandboxing for certain operations
+  sandbox_enabled: false
+  # Maximum execution time for any tool
+  max_execution_time: 600  # seconds
+  # Rate limiting
+  rate_limit:
+    enabled: true
+    max_requests_per_minute: 60

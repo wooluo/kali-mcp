@@ -69,6 +69,19 @@ class KaliAssistant:
                 r'find\s+dirs?\s+(\S+)',
                 r'爆破.*?目录\s*(\S+)',
             ],
+            'gobuster_scan': [
+                r'gobuster\s+(\S+)',
+                r'gobuster\s+dir\s+(\S+)',
+                r'gobuster\s+dns\s+(\S+)',
+                r'gobuster\s+vhost\s+(\S+)',
+                r'使用.*?gobuster.*?(\S+)',
+            ],
+            'dirb_scan': [
+                r'dirb\s+(\S+)',
+                r'use\s+dirb\s+(\S+)',
+                r'dirb\s+scan\s+(\S+)',
+                r'使用.*?dirb.*?(\S+)',
+            ],
             'smb_enum': [
                 r'smb\s+enum\s+(\S+)',
                 r'enumerate\s+smb\s+(\S+)',
@@ -252,6 +265,17 @@ class KaliAssistant:
                 use_https = 'https' in text
                 return self.scan_tools.dir_brute_force(target=target, port=port, use_https=use_https)
 
+            elif intent == 'gobuster_scan':
+                url = params[0]
+                mode = self.extract_param(text, r'mode\s*:?\s*(\w+)', '(dir|dns|fuzz|vhost)', 'dir')
+                wordlist = self.extract_param(text, r'wordlist\s*:?\s*(\S+)', '(\S+)', '/usr/share/wordlists/dirb/common.txt')
+                return self.scan_tools.gobuster_scan(url=url, mode=mode, wordlist=wordlist)
+
+            elif intent == 'dirb_scan':
+                url = params[0]
+                wordlist = self.extract_param(text, r'wordlist\s*:?\s*(\S+)', '(\S+)', '/usr/share/wordlists/dirb/common.txt')
+                return self.scan_tools.dirb_scan(url=url, wordlist=wordlist)
+
             elif intent == 'smb_enum':
                 target = params[0]
                 return self.scan_tools.smb_enum(target=target)
@@ -263,14 +287,32 @@ class KaliAssistant:
             elif intent == 'hydra_crack':
                 target = params[0]
                 service = self.extract_param(text, r'service\s*:?\s*(\w+)', '(ssh|ftp|http|https)', 'ssh')
-                username = self.extract_param(text, r'user\s*:?\s*(\w+)', '(\w+)', 'admin')
-                return self.exploit_tools.hydra_crack(target=target, service=service, username=username)
+                username = self.extract_param(text, r'user\s*:?\s*(\w+)', '(\w+)', '')
+                username_file = self.extract_param(text, r'users?\s+file\s*:?\s*(\S+)', '(\S+)', '')
+                password = self.extract_param(text, r'pass\s*:?\s*(\w+)', '(\w+)', '')
+                password_file = self.extract_param(text, r'(?:pass|passwords?)\s+file\s*:?\s*(\S+)', '(\S+)', '')
+                port = self.extract_param(text, r'port\s*:?\s*(\d+)', '(\d+)', None)
+                return self.exploit_tools.hydra_crack(
+                    target=target,
+                    service=service,
+                    username=username,
+                    username_file=username_file,
+                    password=password,
+                    password_file=password_file,
+                    port=int(port) if port else None
+                )
 
             elif intent == 'john_crack':
                 hash_file = params[0]
                 wordlist = self.extract_param(text, r'wordlist\s*:?\s*(\S+)', '(\S+)', None)
                 mode = self.extract_param(text, r'mode\s*:?\s*(\w+)', '(wordlist|single|incremental)', 'wordlist')
-                return self.exploit_tools.john_crack(hash_file=hash_file, wordlist=wordlist, mode=mode)
+                format_type = self.extract_param(text, r'format\s*:?\s*(\w+)', '(md5|sha256|sha512|bcrypt)', '')
+                return self.exploit_tools.john_crack(
+                    hash_file=hash_file,
+                    wordlist=wordlist,
+                    mode=mode,
+                    format_type=format_type
+                )
 
             elif intent == 'wpscan':
                 url = params[0]
@@ -380,6 +422,9 @@ class KaliAssistant:
             "Web scan: 'nikto scan example.com'",
             "SSL check: 'ssl scan example.com'",
             "Directory brute force: 'brute force dirs example.com'",
+            "Gobuster scan: 'gobuster http://example.com mode:dir'",
+            "Gobuster DNS: 'gobuster example.com mode:dns'",
+            "Dirb scan: 'dirb http://example.com'",
             "SMB enumeration: 'smb enum 192.168.1.1'",
             "Search exploits: 'search exploit vsftpd 2.3.4'",
             "Generate webshell: 'generate webshell password:123 file:shell.php'",
@@ -387,7 +432,10 @@ class KaliAssistant:
             "Base64 encode/decode: 'base64 encode hello world'",
             "Generate hash: 'hash sha256 password123'",
             "Privilege escalation suggestions: 'suggest privilege escalation'",
+            "Hydra crack: 'hydra 192.168.1.1 service:ssh user:admin'",
+            "Hydra with file: 'hydra 192.168.1.1 service:ssh user file:/path/to/users.txt pass file:/path/to/pass.txt'",
             "John the Ripper: 'john hashes.txt wordlist:/path/to/wordlist.txt'",
+            "John with format: 'john hashes.txt format:md5 wordlist:/usr/share/wordlists/rockyou.txt'",
             "WPScan: 'wpscan https://example.com'",
             "Enum4linux: 'enum4linux 192.168.1.1'",
             "Health check: 'health check' or 'system status'",

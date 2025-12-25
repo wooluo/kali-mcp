@@ -363,6 +363,11 @@ async def handle_list_tools() -> list[Tool]:
                         "type": "boolean",
                         "default": False,
                         "description": "Enable OS detection"
+                    },
+                    "additional_args": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Additional nmap arguments (e.g., '-Pn --script vuln')"
                     }
                 },
                 "required": ["target"]
@@ -488,6 +493,11 @@ async def handle_list_tools() -> list[Tool]:
                         "type": "boolean",
                         "default": False,
                         "description": "Use HTTPS instead of HTTP"
+                    },
+                    "additional_args": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Additional Nikto arguments"
                     }
                 },
                 "required": ["target"]
@@ -507,6 +517,11 @@ async def handle_list_tools() -> list[Tool]:
                         "type": "integer",
                         "default": 443,
                         "description": "Port number"
+                    },
+                    "additional_args": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Additional sslscan arguments"
                     }
                 },
                 "required": ["hostname"]
@@ -536,6 +551,11 @@ async def handle_list_tools() -> list[Tool]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "File extensions to check"
+                    },
+                    "additional_args": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Additional gobuster arguments"
                     }
                 },
                 "required": ["target"]
@@ -553,6 +573,60 @@ async def handle_list_tools() -> list[Tool]:
                     }
                 },
                 "required": ["target"]
+            }
+        ),
+        Tool(
+            name="gobuster_scan",
+            description="Execute Gobuster to find directories, DNS subdomains, or virtual hosts",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The target URL"
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["dir", "dns", "fuzz", "vhost"],
+                        "default": "dir",
+                        "description": "Scan mode (dir, dns, fuzz, vhost)"
+                    },
+                    "wordlist": {
+                        "type": "string",
+                        "default": "/usr/share/wordlists/dirb/common.txt",
+                        "description": "Path to wordlist file"
+                    },
+                    "additional_args": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Additional Gobuster arguments"
+                    }
+                },
+                "required": ["url"]
+            }
+        ),
+        Tool(
+            name="dirb_scan",
+            description="Execute Dirb web content scanner",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The target URL"
+                    },
+                    "wordlist": {
+                        "type": "string",
+                        "default": "/usr/share/wordlists/dirb/common.txt",
+                        "description": "Path to wordlist file"
+                    },
+                    "additional_args": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Additional Dirb arguments"
+                    }
+                },
+                "required": ["url"]
             }
         ),
 
@@ -587,14 +661,35 @@ async def handle_list_tools() -> list[Tool]:
                     },
                     "username": {
                         "type": "string",
-                        "description": "Username to test"
+                        "default": "",
+                        "description": "Single username to test"
+                    },
+                    "username_file": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Path to username file"
+                    },
+                    "password": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Single password to test"
+                    },
+                    "password_file": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Path to password file"
                     },
                     "port": {
                         "type": "integer",
                         "description": "Port number"
+                    },
+                    "additional_args": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Additional Hydra arguments"
                     }
                 },
-                "required": ["target", "service", "username"]
+                "required": ["target", "service"]
             }
         ),
         Tool(
@@ -726,6 +821,16 @@ async def handle_list_tools() -> list[Tool]:
                         "enum": ["wordlist", "single", "incremental"],
                         "default": "wordlist",
                         "description": "Cracking mode"
+                    },
+                    "format_type": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Hash format type (e.g., md5, sha256, bcrypt)"
+                    },
+                    "additional_args": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Additional John arguments"
                     }
                 },
                 "required": ["hash_file"]
@@ -935,7 +1040,8 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                 scan_type=arguments.get("scan_type", "-sS"),
                 timing=arguments.get("timing", "T3"),
                 service_detection=arguments.get("service_detection", True),
-                os_detection=arguments.get("os_detection", False)
+                os_detection=arguments.get("os_detection", False),
+                additional_args=arguments.get("additional_args", "")
             )
         elif name == "ping_sweep":
             result = recon_tools.ping_sweep(arguments["network"])
@@ -964,22 +1070,38 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             result = scan_tools.nikto_scan(
                 target=arguments["target"],
                 port=arguments.get("port", 80),
-                use_https=arguments.get("use_https", False)
+                use_https=arguments.get("use_https", False),
+                additional_args=arguments.get("additional_args", "")
             )
         elif name == "ssl_scan":
             result = scan_tools.ssl_scan(
                 arguments["hostname"],
-                arguments.get("port", 443)
+                arguments.get("port", 443),
+                additional_args=arguments.get("additional_args", "")
             )
         elif name == "dir_brute_force":
             result = scan_tools.dir_brute_force(
                 target=arguments["target"],
                 port=arguments.get("port", 80),
                 use_https=arguments.get("use_https", False),
-                extensions=arguments.get("extensions")
+                extensions=arguments.get("extensions"),
+                additional_args=arguments.get("additional_args", "")
             )
         elif name == "smb_enum":
             result = scan_tools.smb_enum(arguments["target"])
+        elif name == "gobuster_scan":
+            result = scan_tools.gobuster_scan(
+                url=arguments["url"],
+                mode=arguments.get("mode", "dir"),
+                wordlist=arguments.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
+                additional_args=arguments.get("additional_args", "")
+            )
+        elif name == "dirb_scan":
+            result = scan_tools.dirb_scan(
+                url=arguments["url"],
+                wordlist=arguments.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
+                additional_args=arguments.get("additional_args", "")
+            )
 
         # ============ EXPLOITATION TOOLS ============
         elif name == "searchsploit":
@@ -988,8 +1110,12 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             result = exploit_tools.hydra_crack(
                 target=arguments["target"],
                 service=arguments["service"],
-                username=arguments["username"],
-                port=arguments.get("port")
+                username=arguments.get("username", ""),
+                username_file=arguments.get("username_file", ""),
+                password=arguments.get("password", ""),
+                password_file=arguments.get("password_file", ""),
+                port=arguments.get("port"),
+                additional_args=arguments.get("additional_args", "")
             )
         elif name == "generate_payload":
             result = exploit_tools.generate_payload(
@@ -1022,7 +1148,9 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             result = exploit_tools.john_crack(
                 hash_file=arguments["hash_file"],
                 wordlist=arguments.get("wordlist"),
-                mode=arguments.get("mode", "wordlist")
+                mode=arguments.get("mode", "wordlist"),
+                format_type=arguments.get("format_type", ""),
+                additional_args=arguments.get("additional_args", "")
             )
         elif name == "wpscan_scan":
             result = exploit_tools.wpscan_scan(

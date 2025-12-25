@@ -189,10 +189,13 @@ sqlmap_scan(url="http://example.com/page?id=1")
 ### 渗透利用（需要授权）
 - `searchsploit` - 搜索Exploit-DB
 - `hydra_crack` - 使用Hydra进行密码暴力破解
+- `john_crack` - 使用John the Ripper进行密码破解
 - `generate_payload` - 使用msfvenom生成载荷
 - `sqlmap_scan` - 使用sqlmap进行SQL注入测试
 - `msf_exploit` - 执行Metasploit漏洞利用
 - `msf_auxiliary` - 运行Metasploit辅助模块
+- `wpscan_scan` - WordPress漏洞扫描器
+- `enum4linux_scan` - SMB/Windows枚举
 
 ### 后渗透（需要授权）
 - `generate_webshell` - 使用weevely生成webshell
@@ -210,6 +213,7 @@ sqlmap_scan(url="http://example.com/page?id=1")
 - `rot13` - ROT13密码
 - `xor_data` - XOR编码/解码
 - `generate_random_string` - 生成随机字符串
+- `system_health_check` - 检查系统健康和工具可用性
 
 ## 🔒 安全特性
 

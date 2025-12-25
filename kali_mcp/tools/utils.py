@@ -395,3 +395,114 @@ class Utils:
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    def system_health_check(self) -> Dict[str, Any]:
+        """
+        Check system health and installed tools availability
+
+        Returns:
+            Dictionary with health status and tool availability
+        """
+        import subprocess
+        import platform
+        
+        essential_tools = {
+            "nmap": "Port scanner",
+            "gobuster": "Directory brute force",
+            "dirb": "Directory brute force alternative", 
+            "nikto": "Web vulnerability scanner",
+            "hydra": "Password cracker",
+            "sqlmap": "SQL injection tester",
+            "msfconsole": "Metasploit framework",
+            "weevely": "Webshell tool",
+            "john": "Password cracker",
+            "wpscan": "WordPress scanner",
+            "enum4linux": "SMB/Windows enumerator"
+        }
+
+        tools_status = {}
+        for tool, description in essential_tools.items():
+            try:
+                result = subprocess.run(
+                    ["which", tool],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+                installed = result.returncode == 0
+                tools_status[tool] = {
+                    "installed": installed,
+                    "description": description,
+                    "path": result.stdout.strip() if installed else None
+                }
+            except:
+                tools_status[tool] = {
+                    "installed": False,
+                    "description": description,
+                    "error": "Check failed"
+                }
+
+        # Count statistics
+        total_tools = len(essential_tools)
+        installed_tools = sum(1 for t in tools_status.values() if t.get("installed", False))
+        
+        # System info
+        system_info = {
+            "platform": platform.system(),
+            "release": platform.release(),
+            "version": platform.version(),
+            "architecture": platform.machine(),
+            "hostname": platform.node()
+        }
+
+        # Python packages check
+        python_packages = {}
+        packages_to_check = ["mako", "prettytable", "pyyaml", "requests", "paramiko"]
+        for package in packages_to_check:
+            try:
+                __import__(package)
+                python_packages[package] = True
+            except ImportError:
+                python_packages[package] = False
+
+        return {
+            "success": True,
+            "system_info": system_info,
+            "tools_status": tools_status,
+            "summary": {
+                "total_tools": total_tools,
+                "installed_tools": installed_tools,
+                "missing_tools": total_tools - installed_tools,
+                "readiness": installed_tools / total_tools * 100
+            },
+            "python_packages": python_packages,
+            "recommendations": self._generate_recommendations(tools_status, python_packages)
+        }
+
+    def _generate_recommendations(self, tools_status: Dict, python_packages: Dict) -> list:
+        """Generate installation recommendations based on missing tools"""
+        recommendations = []
+
+        # Missing Kali tools
+        missing_tools = [name for name, status in tools_status.items() 
+                         if not status.get("installed", False)]
+        if missing_tools:
+            recommendations.append({
+                "type": "kali_tools",
+                "priority": "high",
+                "message": f"Install missing Kali tools: {', '.join(missing_tools)}",
+                "command": f"sudo apt install -y {' '.join(missing_tools)}"
+            })
+
+        # Missing Python packages
+        missing_packages = [name for name, installed in python_packages.items() 
+                           if not installed]
+        if missing_packages:
+            recommendations.append({
+                "type": "python_packages",
+                "priority": "medium",
+                "message": f"Install missing Python packages: {', '.join(missing_packages)}",
+                "command": f"pip install {' '.join(missing_packages)}"
+            })
+
+        return recommendations

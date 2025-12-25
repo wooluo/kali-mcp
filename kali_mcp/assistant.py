@@ -87,6 +87,31 @@ class KaliAssistant:
                 r'brute\s+force\s+(\S+)',
                 r'爆破.*?密码\s*(\S+)',
             ],
+            'john_crack': [
+                r'john\s+(\S+)',
+                r'crack\s+hash(?:es)?\s+(\S+)',
+                r'john\s+the\s+ripper\s+(\S+)',
+                r'使用.*?john.*?破解\s*(\S+)',
+            ],
+            'wpscan': [
+                r'wpscan\s+(\S+)',
+                r'scan\s+wordpress\s+(\S+)',
+                r'wordpress\s+scan\s+(\S+)',
+                r'扫描.*?wordpress\s*(\S+)',
+            ],
+            'enum4linux': [
+                r'enum4linux\s+(\S+)',
+                r'enum\s+windows\s+(\S+)',
+                r'enum\s+samba\s+(\S+)',
+                r'枚举.*?windows\s*(\S+)',
+            ],
+            'health_check': [
+                r'health\s+check',
+                r'check\s+health',
+                r'system\s+status',
+                r'健康.*?检查',
+                r'系统.*?状态',
+            ],
             'generate_payload': [
                 r'generate\s+payload',
                 r'create\s+payload',
@@ -241,6 +266,25 @@ class KaliAssistant:
                 username = self.extract_param(text, r'user\s*:?\s*(\w+)', '(\w+)', 'admin')
                 return self.exploit_tools.hydra_crack(target=target, service=service, username=username)
 
+            elif intent == 'john_crack':
+                hash_file = params[0]
+                wordlist = self.extract_param(text, r'wordlist\s*:?\s*(\S+)', '(\S+)', None)
+                mode = self.extract_param(text, r'mode\s*:?\s*(\w+)', '(wordlist|single|incremental)', 'wordlist')
+                return self.exploit_tools.john_crack(hash_file=hash_file, wordlist=wordlist, mode=mode)
+
+            elif intent == 'wpscan':
+                url = params[0]
+                enumerate_type = self.extract_param(text, r'enum(?:erate)?\s*:?\s*(\w+)', '(\w+)', 'vp')
+                return self.exploit_tools.wpscan_scan(url=url, enumerate_type=enumerate_type)
+
+            elif intent == 'enum4linux':
+                target = params[0]
+                enumerate_all = 'all' in text or '-a' in text
+                return self.exploit_tools.enum4linux_scan(target=target, enumerate_all=enumerate_all)
+
+            elif intent == 'health_check':
+                return self.utils.system_health_check()
+
             elif intent == 'generate_payload':
                 # Extract parameters
                 payload_type = self.extract_param(text, r'(?:payload|type)\s*:?\s*([\w/]+)', '[\w/]+', 'linux/meterpreter/reverse_tcp')
@@ -343,6 +387,10 @@ class KaliAssistant:
             "Base64 encode/decode: 'base64 encode hello world'",
             "Generate hash: 'hash sha256 password123'",
             "Privilege escalation suggestions: 'suggest privilege escalation'",
+            "John the Ripper: 'john hashes.txt wordlist:/path/to/wordlist.txt'",
+            "WPScan: 'wpscan https://example.com'",
+            "Enum4linux: 'enum4linux 192.168.1.1'",
+            "Health check: 'health check' or 'system status'",
         ]
 
     def chat(self, message: str) -> Dict[str, Any]:

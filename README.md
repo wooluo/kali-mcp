@@ -184,10 +184,13 @@ sqlmap_scan(url="http://example.com/page?id=1")
 ### Exploitation (Requires Authorization)
 - `searchsploit` - Search Exploit-DB
 - `hydra_crack` - Password brute forcing with Hydra
+- `john_crack` - Password cracking with John the Ripper
 - `generate_payload` - Generate payloads with msfvenom
 - `sqlmap_scan` - SQL injection testing with sqlmap
 - `msf_exploit` - Execute Metasploit exploits
 - `msf_auxiliary` - Run Metasploit auxiliary modules
+- `wpscan_scan` - WordPress vulnerability scanner
+- `enum4linux_scan` - SMB/Windows enumeration
 
 ### Post-Exploitation (Requires Authorization)
 - `generate_webshell` - Generate webshells with weevely
@@ -205,6 +208,7 @@ sqlmap_scan(url="http://example.com/page?id=1")
 - `rot13` - ROT13 cipher
 - `xor_data` - XOR encoding/decoding
 - `generate_random_string` - Generate random strings
+- `system_health_check` - Check system health and tool availability
 
 ## 🔒 Security Features
 

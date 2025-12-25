@@ -316,6 +316,15 @@ async def handle_list_tools() -> list[Tool]:
                 "required": []
             }
         ),
+        Tool(
+            name="system_health_check",
+            description="Check system health and installed tools availability",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        ),
 
         # ============ RECONNAISSANCE TOOLS ============
         Tool(
@@ -698,6 +707,72 @@ async def handle_list_tools() -> list[Tool]:
                 "required": ["module_path", "options"]
             }
         ),
+        Tool(
+            name="john_crack",
+            description="Password cracking with John the Ripper (REQUIRES AUTHORIZATION)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hash_file": {
+                        "type": "string",
+                        "description": "Path to file containing hashes"
+                    },
+                    "wordlist": {
+                        "type": "string",
+                        "description": "Path to password wordlist (default: rockyou.txt)"
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["wordlist", "single", "incremental"],
+                        "default": "wordlist",
+                        "description": "Cracking mode"
+                    }
+                },
+                "required": ["hash_file"]
+            }
+        ),
+        Tool(
+            name="wpscan_scan",
+            description="Scan WordPress installations using WPScan",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "Target WordPress URL"
+                    },
+                    "enumerate_type": {
+                        "type": "string",
+                        "default": "vp",
+                        "description": "What to enumerate (vulnerabilities, plugins, themes, vp)"
+                    },
+                    "additional_args": {
+                        "type": "string",
+                        "description": "Additional WPScan arguments"
+                    }
+                },
+                "required": ["url"]
+            }
+        ),
+        Tool(
+            name="enum4linux_scan",
+            description="Enumerate Windows/Samba servers using enum4linux",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "type": "string",
+                        "description": "Target IP or hostname"
+                    },
+                    "enumerate_all": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Run all enumeration options"
+                    }
+                },
+                "required": ["target"]
+            }
+        ),
 
         # ============ POST-EXPLOITATION TOOLS ============
         Tool(
@@ -849,6 +924,8 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                 arguments.get("length", 16),
                 arguments.get("charset", "alphanumeric")
             )
+        elif name == "system_health_check":
+            result = utils.system_health_check()
 
         # ============ RECONNAISSANCE TOOLS ============
         elif name == "nmap_scan":
@@ -940,6 +1017,23 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             result = exploit_tools.msf_auxiliary(
                 module_path=arguments["module_path"],
                 options=arguments["options"]
+            )
+        elif name == "john_crack":
+            result = exploit_tools.john_crack(
+                hash_file=arguments["hash_file"],
+                wordlist=arguments.get("wordlist"),
+                mode=arguments.get("mode", "wordlist")
+            )
+        elif name == "wpscan_scan":
+            result = exploit_tools.wpscan_scan(
+                url=arguments["url"],
+                enumerate_type=arguments.get("enumerate_type", "vp"),
+                additional_args=arguments.get("additional_args", "")
+            )
+        elif name == "enum4linux_scan":
+            result = exploit_tools.enum4linux_scan(
+                target=arguments["target"],
+                enumerate_all=arguments.get("enumerate_all", True)
             )
 
         # ============ POST-EXPLOITATION TOOLS ============

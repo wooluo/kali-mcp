@@ -24,7 +24,8 @@ class ReconTools:
     def nmap_scan(self, target: str, ports: str = "1-1024",
                   scan_type: str = "-sS", timing: str = "T3",
                   service_detection: bool = True,
-                  os_detection: bool = False) -> Dict[str, Any]:
+                  os_detection: bool = False,
+                  additional_args: str = "") -> Dict[str, Any]:
         """
         Perform an Nmap scan
 
@@ -35,6 +36,7 @@ class ReconTools:
             timing: Timing template (T0 paranoid - T5 insane)
             service_detection: Enable service version detection (-sV)
             os_detection: Enable OS detection (-O)
+            additional_args: Additional nmap arguments (e.g., "-Pn --script vuln")
 
         Returns:
             Dictionary with scan results
@@ -53,6 +55,10 @@ class ReconTools:
 
             if os_detection:
                 cmd.append("-O")
+
+            # Add additional arguments if provided
+            if additional_args:
+                cmd.extend(additional_args.split())
 
             # Add output formats
             cmd.extend(["-oX", "-"])  # XML output to stdout

@@ -20,7 +20,7 @@ class ScanTools:
         self.operation_type = OperationType.SCAN
 
     def nikto_scan(self, target: str, port: int = 80, use_https: bool = False,
-                   scan_type: str = "basic") -> Dict[str, Any]:
+                   scan_type: str = "basic", additional_args: str = "") -> Dict[str, Any]:
         """
         Run Nikto web server scanner
 
@@ -29,6 +29,7 @@ class ScanTools:
             port: Port number
             use_https: Use HTTPS instead of HTTP
             scan_type: Scan intensity (basic, light, heavy)
+            additional_args: Additional Nikto arguments
 
         Returns:
             Dictionary with scan results
@@ -41,7 +42,13 @@ class ScanTools:
             protocol = "https" if use_https else "http"
             url = f"{protocol}://{target}:{port}"
 
-            cmd = ["nikto", "-h", url, "-Format", "json", "-output", "-"]
+            cmd = ["nikto", "-h", url]
+
+            # Add additional arguments if provided
+            if additional_args:
+                cmd.extend(additional_args.split())
+
+            cmd.extend(["-Format", "json", "-output", "-"])
 
             result = subprocess.run(
                 cmd,
@@ -85,13 +92,14 @@ class ScanTools:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def ssl_scan(self, hostname: str, port: int = 443) -> Dict[str, Any]:
+    def ssl_scan(self, hostname: str, port: int = 443, additional_args: str = "") -> Dict[str, Any]:
         """
         Scan SSL/TLS configuration using testssl.sh or sslscan
 
         Args:
             hostname: Target hostname
             port: Port number
+            additional_args: Additional sslscan arguments
 
         Returns:
             Dictionary with SSL scan results
@@ -102,7 +110,13 @@ class ScanTools:
 
         # Try sslscan first
         try:
-            cmd = ["sslscan", f"{hostname}:{port}"]
+            cmd = ["sslscan"]
+
+            # Add additional arguments if provided
+            if additional_args:
+                cmd.extend(additional_args.split())
+
+            cmd.append(f"{hostname}:{port}")
 
             result = subprocess.run(
                 cmd,
@@ -174,7 +188,8 @@ class ScanTools:
     def dir_brute_force(self, target: str, port: int = 80,
                         wordlist: Optional[str] = None,
                         use_https: bool = False,
-                        extensions: Optional[List[str]] = None) -> Dict[str, Any]:
+                        extensions: Optional[List[str]] = None,
+                        additional_args: str = "") -> Dict[str, Any]:
         """
         Brute force directories and files using gobuster or similar
 
@@ -184,6 +199,7 @@ class ScanTools:
             wordlist: Path to wordlist
             use_https: Use HTTPS
             extensions: File extensions to check
+            additional_args: Additional gobuster arguments
 
         Returns:
             Dictionary with discovered paths
@@ -213,6 +229,10 @@ class ScanTools:
                 "-k",  # Skip TLS verification
                 "-q"   # Quiet mode
             ]
+
+            # Add additional arguments if provided
+            if additional_args:
+                cmd.extend(additional_args.split())
 
             result = subprocess.run(
                 cmd,
@@ -444,5 +464,154 @@ class ScanTools:
                 "success": False,
                 "error": "sqlmap not found. Install with: sudo apt install sqlmap"
             }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def gobuster_scan(self, url: str, mode: str = "dir",
+                      wordlist: str = "/usr/share/wordlists/dirb/common.txt",
+                      additional_args: str = "") -> Dict[str, Any]:
+        """
+        Execute Gobuster to find directories, DNS subdomains, or virtual hosts
+
+        Args:
+            url: The target URL
+            mode: Scan mode (dir, dns, fuzz, vhost)
+            wordlist: Path to wordlist file
+            additional_args: Additional Gobuster arguments
+
+        Returns:
+            Scan results
+        """
+        allowed, reason = self.security.validate_operation(self.operation_type, url)
+        if not allowed:
+            return {"success": False, "error": reason}
+
+        # Validate mode
+        if mode not in ["dir", "dns", "fuzz", "vhost"]:
+            return {
+                "success": False,
+                "error": f"Invalid mode: {mode}. Must be one of: dir, dns, fuzz, vhost"
+            }
+
+        try:
+            cmd = ["gobuster", mode, "-u", url, "-w", wordlist]
+
+            # Add additional arguments if provided
+            if additional_args:
+                cmd.extend(additional_args.split())
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+
+            output = result.stdout
+
+            # Parse results based on mode
+            results = []
+            if mode == "dir":
+                for line in output.split('\n'):
+                    if 'Status:' in line:
+                        match = re.match(r'(/\S+).*?Status: (\d+)', line)
+                        if match:
+                            path, status = match.groups()
+                            results.append({
+                                "path": path,
+                                "status_code": int(status),
+                                "url": f"{url}{path}"
+                            })
+
+            self.security.log_operation(
+                self.operation_type, "gobuster_scan", url,
+                {"mode": mode}, f"success - {len(results)} results"
+            )
+
+            return {
+                "success": True,
+                "target": url,
+                "mode": mode,
+                "results": results[:100],  # Limit results
+                "raw_output": output[:10000]
+            }
+
+        except FileNotFoundError:
+            return {
+                "success": False,
+                "error": "Gobuster not found. Install with: sudo apt install gobuster"
+            }
+        except subprocess.TimeoutExpired:
+            return {"success": False, "error": "Scan timed out after 5 minutes"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def dirb_scan(self, url: str,
+                  wordlist: str = "/usr/share/wordlists/dirb/common.txt",
+                  additional_args: str = "") -> Dict[str, Any]:
+        """
+        Execute Dirb web content scanner
+
+        Args:
+            url: The target URL
+            wordlist: Path to wordlist file
+            additional_args: Additional Dirb arguments
+
+        Returns:
+            Scan results
+        """
+        allowed, reason = self.security.validate_operation(self.operation_type, url)
+        if not allowed:
+            return {"success": False, "error": reason}
+
+        try:
+            cmd = ["dirb", url, wordlist]
+
+            # Add additional arguments if provided
+            if additional_args:
+                cmd.extend(additional_args.split())
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+
+            output = result.stdout
+
+            # Parse dirb output
+            discovered = []
+            for line in output.split('\n'):
+                if line.strip() and '=>' in line and 'CODE:' in line:
+                    # Parse: /path (CODE:200|SIZE:1234)
+                    match = re.match(r'(/\S+).*?CODE:(\d+)', line)
+                    if match:
+                        path, code = match.groups()
+                        discovered.append({
+                            "path": path,
+                            "status_code": int(code),
+                            "url": f"{url}{path}"
+                        })
+
+            self.security.log_operation(
+                self.operation_type, "dirb_scan", url,
+                {"wordlist": wordlist}, f"success - {len(discovered)} found"
+            )
+
+            return {
+                "success": True,
+                "target": url,
+                "discovered": discovered[:100],
+                "raw_output": output[:10000]
+            }
+
+        except FileNotFoundError:
+            return {
+                "success": False,
+                "error": "Dirb not found. Install with: sudo apt install dirb"
+            }
+        except subprocess.TimeoutExpired:
+            return {"success": False, "error": "Scan timed out after 5 minutes"}
         except Exception as e:
             return {"success": False, "error": str(e)}
